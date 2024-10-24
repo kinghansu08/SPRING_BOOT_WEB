@@ -3,6 +3,10 @@
 1,2,3,4,5,6주차 추가 예외처리까지 완료
 
 
+#SPRING_BOOT_WEB
+
+1,2,3,4,5,6주차 추가 예외처리까지 완료
+
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
@@ -13,21 +17,55 @@
 </head>
 <body>
 <div class="container">
-    <h1 class="mt-5 text-danger">블로그 게시판 - 잘못된 접근</h1>
+    <h1 class="mt-5">블로그 게시판</h1>
 
-    <!-- 오류 메시지 -->
-    <div class="alert alert-danger mt-4" role="alert">
-        <h4 class="alert-heading">잘못된 게시판 접근입니다!</h4>
-        <p>요청하신 게시글을 찾을 수 없거나, 접근 권한이 없습니다.</p>
-        <hr>
-        <p class="mb-0">이전 페이지로 돌아가시려면 아래 버튼을 클릭해주세요.</p>
+    <!-- 게시글 추가 폼 -->
+    <form th:action="@{/api/articles}" method="post">
+            <label for="title">제목:</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+        <div class="form-group">
+            <label for="content">내용:</label>
+            <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">추가</button>
+    </form>
+
     </div>
 
-    <!-- 이전 페이지로 돌아가는 버튼 -->
-    <div class="mt-4">
-        <a href="javascript:history.back()" class="btn btn-primary">이전 페이지로</a>
+        <!-- 게시글 리스트 -->
+        <div class="mt-5">
+            <h2>게시글 목록</h2>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>제목</th>
+                        <th>내용</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="article : ${articles}">
+                        <td th:text="${article.id}"></td>
+                        <td th:text="${article.title}"></td>
+                        <td th:text="${article.content}"></td>
+                        <td>
+                            <!-- 수정 버튼-->
+                            <a class="btn btn-warning" th:href="@{/article_edit/{id}(id=${article.id})}">수정</a>
+                        </td>
+                        <td>
+                            <!-- 삭제 버튼 -->
+  <form th:action="@{/api/article_delete/{id}(id=${article.id})}" method="post" style="display:inline;">
+    <input type="hidden" name="_method" value="delete">
+    <button type="submit" class="btn btn-danger">삭제</button>
+    </form>
+   
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 </body>
 </html>
 
