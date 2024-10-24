@@ -1,16 +1,12 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.service.TestService; // 서비스 클래스 연동
-import com.example.demo.model.service.BlogService; // BlogService 임포트
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
-import java.util.Optional;  //Optional 임포트
 
-import com.example.demo.model.domain.Article;
 import com.example.demo.model.domain.TestDB;
 
 @Controller
@@ -20,8 +16,7 @@ public class DemoController {
     private TestService testService;
 
     // BlogService를 Autowired로 주입
-    @Autowired
-    private BlogService blogService;
+
 
     // "/hello" URL로 들어오는 HTTP GET 요청을 처리
     @GetMapping("/hello")
@@ -76,17 +71,7 @@ public class DemoController {
         return "testdb"; // testdb.html 페이지 반환
     }
 
-    @GetMapping("/article_edit/{id}") // 게시판링크지정
-    public String article_edit(Model model, @PathVariable Long id) {
-        Optional<Article> list = blogService.findById(id); // 선택한게시판글
-        if (list.isPresent()) {
-            model.addAttribute("article", list.get()); // 존재하면 Article 객체를 모델에 추가
-        } else {
-            // 처리할 로직 추가(예: 오류 페이지로 리다이렉트, 예외 처리 등)
-            return "/error_page/article_error"; //  오류 처리 페이지로 연결(이름 수정됨)
-        }
-        return "article_edit"; // article_edit.html 페이지 반환
-    }
 
+ 
     
 }

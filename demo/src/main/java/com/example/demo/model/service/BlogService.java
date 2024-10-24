@@ -24,12 +24,12 @@ public class BlogService {
 
     // 게시글 수정
     public void update(Long id, AddArticleRequest request) {
-        Optional<Article> optionalArticle = blogRepository.findById(id);
-        optionalArticle.ifPresent(article -> {
-            article.update(request.getTitle(), request.getContent()); // Article 업데이트
-            blogRepository.save(article); // 수정된 Article 저장
-        });
-    }
+        Optional<Article> optionalArticle = blogRepository.findById(id); // 단일글조회
+       optionalArticle.ifPresent(article -> { //값이있으면
+       article.update(request.getTitle(), request.getContent()); // 값을수정
+       blogRepository.save(article); // Article 객체에저장
+       });
+        }
 
     // 게시판 전체 목록 조회
     public List<Article> findAll() {
