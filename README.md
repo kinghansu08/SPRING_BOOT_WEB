@@ -4,7 +4,7 @@
 
 ##프로젝트 소개
 
-##주요코드
+######주요코드
 
 ````<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
