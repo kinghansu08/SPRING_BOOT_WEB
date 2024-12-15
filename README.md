@@ -1,4 +1,4 @@
-# Proman-함께 일 할 동반자 모집!
+# Proman-함께 일 할 동반자 모집!(추가구현:7,9,10,11 실패)
 
 ## 개발 기간
 
@@ -826,6 +826,358 @@ public class Member_Service {
 </div>
 </body>
 </html>
+````
+#### board_list.html
+````
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <!-- 헤더 -->
+    <div class="d-flex justify-content-between align-items-center mt-4 p-3 border rounded bg-light">
+        <h1 class="m-0">블로그 게시판</h1>
+        <div class="text-right">
+            <span class="font-weight-bold text-primary" th:text="${email} + '님 환영합니다.'"></span>
+            <a class="btn btn-sm btn-outline-danger ml-3" th:href="@{/api/logout}">로그아웃</a>
+        </div>
+    </div>
+
+    <!-- 검색 -->
+    <form th:action="@{/board_list}" method="get" class="mt-4">
+        <div class="input-group">
+            <input type="text" name="keyword" th:value="${keyword}" class="form-control" placeholder="검색어 입력...">
+            <button type="submit" class="btn btn-primary">검색</button>
+        </div>
+    </form>
+
+    <!-- 게시글 목록 -->
+    <div class="mt-5">
+        <h2>게시글 목록</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>글번호</th>
+                    <th>제목</th>
+                    <th>작성자</th>
+                    <th>작성일</th>
+                    <th>조회수</th>
+                    <th>좋아요</th>
+                    <!-- <th>관리</th> -->
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 게시글 목록 -->
+                <tr th:each="board, iterStat : ${boards}">
+                    <td th:text="${startNum != null ? startNum + iterStat.index : iterStat.index + 1}"></td>
+                    <td>
+                        <a th:href="@{/board_view/{id}(id=${board.id})}" th:text="${board.title}"></a>
+                    </td>
+                    <td th:text="${board.user}"></td>
+                    <td th:text="${board.newdate}"></td>
+                    <td th:text="${board.count}"></td>
+                    <td th:text="${board.likec}"></td>
+                </tr>
+                
+            </tbody>            
+        </table>
+    </div>
+
+    <!-- 글쓰기 버튼 -->
+    <a class="btn btn-primary mt-3" th:href="@{/board_write}">글쓰기</a>
+
+    <!-- 페이지네이션 -->
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <!-- 이전 페이지 버튼 -->
+            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                <a class="page-link" 
+                   th:href="@{/board_list(page=${currentPage > 0 ? currentPage - 1 : 0}, keyword=${keyword})}" 
+                   aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+
+            <!-- 페이지 번호 -->
+            <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                th:classappend="${i == currentPage} ? 'active'">
+                <a class="page-link" th:href="@{/board_list(page=${i}, keyword=${keyword})}" th:text="${i + 1}"></a>
+            </li>
+
+            <!-- 다음 페이지 버튼 -->
+            <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                <a class="page-link" 
+                   th:href="@{/board_list(page=${currentPage + 1 < totalPages ? currentPage + 1 : currentPage}, keyword=${keyword})}" 
+                   aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</body>
+</html>
+````
+
+#### board_update(edit을 update로 바꿈)
+````
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판(NEW)</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>블로그 게시판(NEW)</h1>
+        <form th:action="@{/api/board_update/{id}(id=${board.id})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <div class="form-group">
+                <label for="title">제목</label>
+                <input type="text" id="title" name="title" class="form-control" th:value="${board.title}">
+            </div>
+            <div class="form-group">
+                <label for="content">내용</label>
+                <textarea id="content" name="content" class="form-control" rows="10" th:text="${board.content}"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">수정</button>
+        </form>
+        
+    </div>
+</body>
+</html>
+````
+#### board_view.html
+````<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <h1 class="mt-5">블로그 게시판</h1>
+
+  
+   
+    <!-- 게시글 리스트 -->
+    <div class="mt-5">
+        <h2>게시글 목록</h2>
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th>글내용</th>
+            </tr>
+            </thead>
+            <tbody>
+                <tr th:each="board : ${boards}">
+                    <td th:text="${board.content}"></td>
+                </tr>
+
+                <tr th:each="board : ${boards}">
+                    <td>
+                    <!-- 수정 버튼-->
+                    <a class="btn btn-warning" th:href="@{/board_edit/{id}(id=${board.id})}">수정</a>
+                    <!-- 삭제 버튼-->
+                    <form th:action="@{/api/board_delete/{id}(id=${board.id})}" method="post" style="display:inline;">
+                    <input type="hidden" name="_method" value="delete">
+                    <button type="submit" class="btn btn-danger">삭제</button>
+                    </form>
+                    </td>
+                    </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>
+````
+#### board_write
+````
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판(new)</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <h1 class="mt-5">블로그 게시판(new)</h1>
+
+    <!--게시글추가폼-->
+ <div class="mt-4">
+    <h2>게시글추가</h2>
+    <form th:action="@{/api/boards}" method="post" name="content">
+    <div class="form-group">
+    <label for="title">제목:</label>
+    <input type="text" class="form-control" id="title" name="title" required>
+    </div>
+    <div class="form-group">
+    <label for="content">내용:</label>
+    <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">글저장하기</button>
+   
+    </form>
+    <input type="hidden" id="user" name="user" value="GUEST">
+    <input type="hidden" id="newdate" name="newdate" value="오늘날짜">
+    <input type="hidden" id="count" name="count" value="0">
+    <input type="hidden" id="likec" name="likec" value="0">
+    </form>
+    </div>
+
+    <!-- 게시글 리스트 -->
+    <div class="mt-5">
+        <h2>게시글 목록</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>글번호</th>
+                    <th>제목</th>
+                    <th>작성자</th>
+                    <th>작성일</th>
+                    <th>조회수</th>
+                    <th>좋아요</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="board : ${boards}">
+                    <td th:text="${board.id}"></td>
+                    <td>
+                        <a th:href="@{/board_view/{id}(id=${board.id})}">
+                            <span th:text="${board.title}"></span>
+                        </a>
+                    </td>
+                    <td th:text="${board.user}"></td>
+                    <td th:text="${board.newdate}"></td>
+                    <td th:text="${board.count}"></td>
+                    <td th:text="${board.likec}"></td>
+                    <td>
+                        <!-- 수정 버튼 -->
+                        <a class="btn btn-warning" th:href="@{/board_edit/{id}(id=${board.id})}">수정</a>
+
+                        <!-- 삭제 버튼 -->
+                        <form th:action="@{/api/article_delete/{id}(id=${board.id})}" method="post" style="display:inline;">
+                           <input type="hidden" name="_method" value="delete">
+                           <button type="submit" class="btn btn-danger">삭제</button>
+                           </form>
+
+                          
+                    </td>
+        </table>
+    </div>
+    <!-- 글쓰기 버튼-->
+    <a class="btn btn-warning" th:href="@{/board_write}">글쓰기</a>
+                            
+</div>
+</body>
+</html>
+````
+#### join_end.html
+````<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판(new)</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container text-center mt-5">
+    <!-- 회원가입 완료 메세지 -->
+    <h1 class="mt-4"text-success>회원가입이 완료되었습니다!</h1>
+    <p class="mb-4">환영합니다! 이제 블로그 서비스를 자유롭게 이용하실 수 있습니다.</p>
+ <!-- 메인 페이지로 돌아가기 버튼-->
+ <a href="/" class="btn btn-primary btn-lg">
+메인 페이지로 이동
+</a>
+ </div>
+ </body>
+````
+#### join_new.html
+````
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 게시판(new)</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container">
+    <h1 class="mt-5">회원 가입 화면</h1>
+
+    <!-- 회원가입 폼 -->
+    <div class="mt-4">
+        <div class="card shadow-sm">
+        <div class="card-body">
+        <h3 class="card-title text-center mb-4">회원정보입력</h3>
+        <form action="@{/api/members}" method="post">
+        <!--이름-->
+        <div class="form-group">
+        <label for="name">이름</label>
+        <input type="text" class="form-control" id="name" name="name" placeholder="이름을입력하세요"required>
+        </div>
+        <!--이메일-->
+        <div class="form-group">
+        <label for="email">이메일</label>
+        <input type="email" class="form-control" id="email" name="email" placeholder="example@email.com"required>
+        </div>
+         <!--비밀번호-->
+        <div class="form-group">
+        <label for="password">비밀번호</label>
+        <input type="password" class="form-control" id="password" name="password" placeholder="비밀번호를입력하세요"required>
+        </div>
+        <!--나이-->
+        <div class="form-group">
+        <label for="age">나이</label>
+        <input type="number" class="form-control" id="age" name="age" placeholder="나이를입력하세요"required>
+        </div>
+        <!--전화번호-->
+        <div class="form-group">
+        <label for="mobile">전화번호</label>
+        <input type="tel" class="form-control" id="mobile" name="mobile" placeholder="010-1234-5678" required>
+        </div>
+        <!--주소-->
+        <div class="form-group">
+        <label for="address">주소</label>
+        <input type="text" class="form-control" id="address" name="address" placeholder="주소를입력하세요"required>
+        </div>
+        <!--회원가입버튼-->
+        <div class="text-center mt-4">
+        <button type="submit" class="btnbtn-primary btn-block">회원가입하기</button>
+        </div>
+        </form>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+````
+#### upload_end.html
+````<!DOCTYPE html>
+ <html xmlns:th="http://www.thymeleaf.org">
+ <head>
+ <meta charset="UTF-8">
+ <title>블로그 게시판(new)</title>
+ <meta content="width=device-width, initial-scale=1.0" name="viewport">
+ <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+ </head>
+ <body>
+ <div class="container text-center mt-5">
+ <h1 class="mb-4 text-success">메일 전송(파일 업로드)가 완료되었습니다!</h1>
+ <a href="/">홈으로 돌아가기</a>
+ </div>
+ </body>
+ </html>
 ````
 
 
