@@ -210,7 +210,7 @@ public String updateBoard(@PathVariable Long id, @ModelAttribute AddArticleReque
 }
 ````
 
-### FileController.java
+#### FileController.java
 ````package com.example.demo.controller;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -263,6 +263,547 @@ writer.write("요청메시지:");
    }
 }
 ````
+#### GlobalExceptionHandler.java
+````package com.example.demo.controller;
+
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(Exception.class) // 모든 예외를 처리
+    public String handleException(Exception ex, RedirectAttributes redirectAttributes, Model model) {
+        // 예외 메시지를 모델에 추가하거나 리다이렉트 속성에 추가 가능
+        model.addAttribute("errorMessage", ex.getMessage());
+        return "error_page/article_error"; // 오류 처리 페이지로 이동
+    }
+}
+````
+
+#### MemberController.java
+````package com.example.demo.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import com.example.demo.model.domain.Member;
+import com.example.demo.model.service.AddMemberRequest;
+import com.example.demo.model.service.Member_Service;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
+// 1127추가
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import java.util.UUID;
+// 1201에 추가된 내용
+import jakarta.servlet.http.Cookie;
+import jakarta.validation.Valid; // Jakarta EE (최신 버전)
+
+@Controller
+public class MemberController {
+    @Autowired
+    private Member_Service memberService;
+
+     @GetMapping("/join_new") // 회원 가입 페이지 연결
+public String join_new() {
+ return "join_new"; // .HTML 연결
+}
+
+@PostMapping("/api/members") // 회원 가입 저장
+public String addmembers(
+    @Valid @ModelAttribute AddMemberRequest request) {
+    memberService.saveMember(request);
+    return "join_end"; // .HTML 연결
+}
+
+@GetMapping("/member_login") // 로그인 페이지 연결
+public String member_login() {
+ return "login"; // .HTML 연결
+}
+    
+
+@PostMapping("/api/login_check") // 아이디, 패스워드 로그인 체크
+public String checkMembers(@ModelAttribute AddMemberRequest request, Model model, HttpServletRequest request2, HttpServletResponse response) {
+    try {
+        // 기존 세션 확인 및 초기화
+        HttpSession session = request2.getSession(false); // 기존 세션 가져오기(존재하지 않으면 null 반환)
+        if (session != null) {
+            session.invalidate(); // 기존 세션 무효화
+            Cookie cookie = new Cookie("JSESSIONID", null); // JSESSIONID 초기화
+            cookie.setPath("/"); // 쿠키 경로 설정
+            cookie.setMaxAge(0); // 쿠키 삭제 (0으로 설정)
+            response.addCookie(cookie); // 삭제된 쿠키를 응답으로 전달
+        }
+
+        // 새로운 세션 생성
+        session = request2.getSession(true);
+
+
+        // 로그인 체크: 이메일과 패스워드 검증
+        Member member = memberService.loginCheck(request.getEmail(), request.getPassword());
+        
+        // 세션에 사용자 ID 저장
+        String sessionId = UUID.randomUUID().toString(); // 고유 세션 ID 생성
+        session.setAttribute("userId", sessionId); // 세션에 userId 저장
+        
+        // 로그인 성공 시 회원 정보를 모델에 추가
+        model.addAttribute("member", member);
+        
+        String email = request.getEmail(); // 이메일 얻기
+        session.setAttribute("userId", sessionId); // 아이디 이름 설정
+        session.setAttribute("email", email); // 이메일 설정
+        // 디버깅용 출력 (서버 로그에 표시)
+        System.out.println("로그인 성공! 세션 userId: " + sessionId);
+        
+        
+        // 로그인 성공 후 게시판 페이지로 이동
+        return "redirect:/board_list";
+    } catch (IllegalArgumentException e) {
+        // 로그인 실패 시 에러 메시지를 모델에 추가
+        model.addAttribute("error", e.getMessage());
+
+        // 로그인 페이지로 리다이렉트
+        return "login";
+    }
+}
+
+@GetMapping("/api/logout") // 로그아웃버튼동작
+public String member_logout(Model model, HttpServletRequest request2, HttpServletResponse response) {
+
+    try {
+    HttpSession session = request2.getSession(false); // 기존세션가져오기(존재하지않으면null 반환)
+    session.invalidate(); // 기존세션무효화
+    Cookie cookie= new Cookie("JSESSIONID", null); // JSESSIONID is the default session cookie name
+    cookie.setPath("/"); // Set the path for the cookie
+    cookie.setMaxAge(0); // Set cookie expiration to 0 (removes the cookie)
+    response.addCookie(cookie); // Add cookie to the response
+    session = request2.getSession(true); // 새로운세션생성
+    System.out.println("세션userId: " + session.getAttribute("userId" )); // 초기화후IDE 터미널에세션값출력
+    return "login"; // 로그인페이지로리다이렉트
+} catch (IllegalArgumentException e) {
+    model.addAttribute("error", e.getMessage()); // 에러메시지전달
+    return "login"; // 로그인실패시로그인페이지로리다이렉트
+}
+}
+}
+````
+
+### domain
+#### Board.java
+````package com.example.demo.model.domain;
+
+import lombok.*; // 어노테이션 자동 생성
+import jakarta.persistence.*; // 기존 javax 후속 버전
+
+@Getter
+@Entity
+@Table(name = "board")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Board {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", updatable = false)
+    private Long id;
+
+    @Column(name = "title", nullable = false)
+    private String title = "";
+
+    @Column(name = "content", nullable = false)
+    private String content = "";
+
+    @Column(name = "user", nullable = false)
+    private String user = "";
+
+    @Column(name = "newdate", nullable = false)
+    private String newdate = "";
+
+    @Column(name = "count", nullable = false)
+    private String count = "";
+
+    @Column(name = "likec", nullable = false)
+    private String likec = "";
+
+
+    @Builder
+    public Board(String title, String content, String user, String newdate, String count, String likec) {
+        this.title = title;
+        this.content = content;
+        this.user = user;
+        this.newdate = newdate;
+        this.count = count;
+        this.likec = likec;
+    }
+
+    public void update(String title, String content,String user,String newdate,String count,String likec) {
+        this.title = title;
+        this.content = content;
+        this.user = user;
+        this.newdate = newdate;
+        this.count = count;
+        this.likec = likec;
+    }
+ 
+}
+````
+
+#### Member.java
+````package com.example.demo.model.domain;
+
+import lombok.*; // 어노테이션 자동 생성
+import jakarta.persistence.*; // 기존 javax 후속 버전
+
+@Getter
+@Entity
+@Table(name = "member")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Member {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // 기본 키 1씩 증가
+    @Column(name = "id", updatable = false) // 수정 x
+    private Long id;
+
+    @Column(name = "name", nullable = false) // null x
+    private String name = "";
+
+    @Column(name = "email", unique = true, nullable = false) // unique 중복 x
+    private String email = "";
+
+    @Column(name = "password", nullable = false)
+    private String password = "";
+
+    @Column(name = "age", nullable = false)
+    private String age = "";
+
+    @Column(name = "mobile", nullable = false)
+    private String mobile = "";
+
+    @Column(name = "address", nullable = false)
+    private String address = "";
+
+    @Builder // 생성자에 빌더 패턴 적용(불변성)
+    public Member(String name, String email, String password, String age, String mobile, String address){
+    this.name = name;
+    this.email = email;
+    this.password = password;
+    this.age = age;
+    this.mobile = mobile;
+    this.address = address;
+    }
+}
+````
+
+### repository
+#### BlogRepository.java
+````package com.example.demo.model.repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.example.demo.model.domain.Board;
+
+@Repository
+ public interface BlogRepository extends JpaRepository<Board, Long>{
+ Page<Board> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+ }
+````
+
+#### Boardrepository.java
+````package com.example.demo.model.repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import com.example.demo.model.domain.Board;
+
+//@Repository
+//public interface BlogRepository extends JpaRepository<Article, Long>{
+//}
+@Repository
+public interface BoardRepository extends JpaRepository<Board, Long>{
+    // List<Article> findAll();
+}
+````
+
+#### Member_Service.java
+````package com.example.demo.model.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import com.example.demo.model.domain.Member;
+
+@Repository
+ public interface Member_Repository extends JpaRepository<Member, Long> {
+ Member findByEmail(String email);
+ }
+````
+
+### service
+#### AddArticleRequest.java
+````package com.example.demo.model.service;
+
+import lombok.*; // 어노테이션 자동 생성
+
+import com.example.demo.model.domain.Board;
+
+@NoArgsConstructor // 기본 생성자 추가
+@AllArgsConstructor // 모든 필드 값을 파라미터로 받는 생성자 추가
+@Data // getter, setter, toString, equals 등 자동 생성
+public class AddArticleRequest {
+    private String title;
+    private String content;
+    private String user;
+    private String newdate;
+    private String count;
+    private String likec;
+
+    // DTO를 Article 엔티티로 변환하는 메서드
+    // public Article toEntity() { 
+    //     return Article.builder()
+    //         .title(title)
+    //         .content(content)
+    //         .build();
+    // }
+    // DTO를 board 엔티티로 변환하는 메서드
+
+    public Board toEntity() { 
+             return Board.builder()
+                 .title(title)
+                 .content(content)
+                 .user(user)
+                 .newdate(newdate)
+                 .count(count)
+                 .likec(likec)
+                 .build();
+         }
+
+         // 추가된 getter 메서드 (Lombok이 자동으로 생성하지만 명시적으로 구현 가능)
+    public String getUser() {
+        return user;
+    }
+
+    public String getNewdate() {
+        return newdate;
+    }
+
+    public String getCount() {
+        return count;
+    }
+
+    public String getLikec() {
+        return likec;
+    }   
+}
+````
+#### AddMemberRequest.java
+````
+package com.example.demo.model.service;
+
+import com.example.demo.model.domain.Member;
+import lombok.*; // 어노테이션 자동 생성\
+
+import jakarta.validation.constraints.*;
+
+@NoArgsConstructor // 기본 생성자 추가
+@AllArgsConstructor // 모든 필드 값을 파라미터로 받는 생성자 추가
+@Data // getter, setter, toString, equals 등 자동 생성
+public class AddMemberRequest {
+    @NotBlank(message = "이름은 필수 입력 사항입니다.")
+    private String name;
+
+    @Email(message = "유효하지 않은 이메일 형식입니다.")
+    @NotBlank(message = "이메일은 필수 입력 사항입니다.")
+    private String email;
+
+    @NotBlank(message = "비밀번호는 필수 입력 사항입니다.")
+    @Size(min = 8, max = 20, message = "비밀번호는 8자 이상, 20자 이하로 입력하세요.")
+    private String password;
+
+    @NotNull(message = "나이는 필수 입력 사항입니다.")
+    @Min(value = 1, message = "나이는 1세 이상이어야 합니다.")
+    @Max(value = 100, message = "나이는 100세 이하로 입력하세요.")
+    private Integer age;
+
+    @NotBlank(message = "휴대폰 번호는 필수 입력 사항입니다.")
+    private String mobile;
+
+    @NotBlank(message = "주소는 필수 입력 사항입니다.")
+    private String address;
+        
+        public Member toEntity(){ // Member 생성자를 통해 객체 생성
+            return Member.builder()
+             .name(name)
+             .email(email)
+             .password(password)
+             .age(String.valueOf(age))
+             .mobile(mobile)
+             .address(address)
+             .build();
+        }
+    }
+````
+#### BlogService.java
+````package com.example.demo.model.service;
+
+import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.example.demo.model.domain.Board;
+import com.example.demo.model.repository.BlogRepository;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import lombok.RequiredArgsConstructor;
+
+
+
+
+@Service
+@RequiredArgsConstructor // 생성자 자동 생성
+public class BlogService {
+
+    @Autowired
+    //private final BlogRepository blogRepository;
+     private final BlogRepository blogRepository; // 리포지토리 선언
+
+
+      // 게시판 전체 목록 조회
+    //public List<Article> findAll() {
+      //  return blogRepository.findAll();
+    //}
+
+    //게시판 특정 글 조회
+    // public Optional<Article> findById(Long id) {
+    //     return blogRepository.findById(id);
+    // }
+
+    public List<Board> findAll() { // 게시판 전체 목록 조회
+    return blogRepository.findAll();
+    }
+
+    public Optional<Board> findById(Long id) { // 게시판 특정 글 조회
+     return blogRepository.findById(id);
+    }
+
+    public Page<Board> findAll(Pageable pageable) {
+      return blogRepository.findAll(pageable);
+      }
+      public Page<Board> searchByKeyword(String keyword, Pageable pageable) {
+      return blogRepository.findByTitleContainingIgnoreCase(keyword, pageable);
+      } // LIKE 검색 제공(대소문자 무시)
+
+    public Board save(AddArticleRequest request){
+      // DTO가 없는 경우 이곳에 직접 구현 가능
+     return blogRepository.save(request.toEntity());
+      }
+
+    // 게시글 수정
+    public void update(Long id, AddArticleRequest request) {
+      System.out.println("Service에서 수정 요청 ID: " + id);
+      System.out.println("Service에서 수정 요청 데이터: " + request);
+      Optional<Board> optionalBoard = blogRepository.findById(id);
+      if (optionalBoard.isPresent()) {
+          Board board = optionalBoard.get();
+          board.update(request.getTitle(), request.getContent(), request.getUser(),
+                       request.getNewdate(), request.getCount(), request.getLikec());
+          blogRepository.save(board);
+          System.out.println("수정 완료: " + board);
+      } else {
+          throw new IllegalArgumentException("해당 ID의 게시글이 없습니다: " + id);
+      }
+  }
+  
+      public void delete(Long id) {
+        Optional<Board> optionalBoard = blogRepository.findById(id); // 삭제할 게시글 조회
+        if (optionalBoard.isPresent()) {
+            blogRepository.deleteById(id); // 게시글 삭제
+        } else {
+            throw new IllegalArgumentException("삭제할 게시글이 존재하지 않습니다. ID: " + id);
+        }
+    }
+
+    // // 게시글 저장
+    // public Article save(AddArticleRequest request) {
+    //     return blogRepository.save(request.toEntity());
+    // }
+    // public void delete(Long id) {
+    //     blogRepository.deleteById(id);
+    //     }
+}
+````
+
+#### Member_Service.java
+````package com.example.demo.model.service;
+
+import org.springframework.stereotype.Service;
+import lombok.RequiredArgsConstructor;
+import com.example.demo.model.repository.Member_Repository;
+
+//1125이후 추가한 내용
+import org.springframework.transaction.annotation.Transactional;
+import com.example.demo.model.domain.Member;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import jakarta.validation.Valid; // Jakarta EE (최신 버전)
+import org.springframework.validation.annotation.Validated;
+
+
+
+@Service
+@Validated
+@Transactional // 트랜잭션처리(클래스내모든메소드대상)
+@RequiredArgsConstructor
+public class Member_Service {
+    // @Autowired
+    // private final Member_Repository member_Repository; // 리포지토리 선언
+
+    private final Member_Repository memberRepository;
+    private final PasswordEncoder passwordEncoder;  //스프링버전5 이후, 단방향해싱알고리즘지원
+
+    private void validateDuplicateMember(AddMemberRequest request){
+    Member findMember= memberRepository.findByEmail(request.getEmail()); // 이메일존재유무
+    if(findMember!= null){
+    throw new IllegalStateException("이미가입된회원입니다."); // 예외처리
+    }
+    }
+    
+    public Member saveMember(@Valid AddMemberRequest request){
+        validateDuplicateMember(request); // 이메일 체크
+
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        request.setPassword(encodedPassword); // 암호화된 비밀번호 설정
+        return memberRepository.save(request.toEntity());
+    }
+
+    public Member loginCheck(String email, String rawPassword) {
+    Member member = memberRepository.findByEmail(email); // 이메일 조회
+    if (member == null) {
+    throw new IllegalArgumentException("등록되지 않은 이메일입니다.");
+    }
+    if (!passwordEncoder.matches(rawPassword, member.getPassword())) { // 비밀번호 확인
+    throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+    }
+    return member; // 인증 성공 시 회원 객체 반환
+    }
+
+}
+````
+
+
+
+
+
+
+
 
 
 
