@@ -1,8 +1,12 @@
 #SPRING_BOOT_WEB
 
+스트링부트 11주차까지 구현
 
+##프로젝트 소개
 
-<!DOCTYPE html>
+##주요코드
+
+````<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -62,5 +66,5 @@
         </div>
     </div>
 </body>
-</html>
+</html>````
 
