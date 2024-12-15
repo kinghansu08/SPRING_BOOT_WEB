@@ -1,11 +1,7 @@
 #SPRING_BOOT_WEB
 
-1,2,3,4,5,6주차 추가 예외처리까지 완료
+####제목
 
-
-#SPRING_BOOT_WEB
-
-1,2,3,4,5,6주차 추가 예외처리까지 완료
 
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
