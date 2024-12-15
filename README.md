@@ -53,7 +53,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 public PasswordEncoder passwordEncoder() {
 return new BCryptPasswordEncoder(); // 비밀번호 암호화 저장
 }    
-}````
+}
 
 
 
